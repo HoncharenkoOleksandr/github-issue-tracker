@@ -1,0 +1,35 @@
+.column {
+  &_container {
+    height: 70vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px;
+    background: #f7f7f7;
+    border-radius: 8px;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  &_container::-webkit-scrollbar {
+    width: 6px;
+  }
+  &_container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+  &_emptyZone {
+    margin: 10px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    border: 1px dashed rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+    width: 100%;
+  }
+}
