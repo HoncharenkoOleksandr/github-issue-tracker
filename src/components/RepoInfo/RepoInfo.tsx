@@ -13,7 +13,33 @@ const RepoInfo = () => {
       style={{ padding: '16px 24px', background: '#fff', borderBottom: '1px solid #ddd' }}
       gap="large"
     >
-      <Breadcrumb items={[{ title: repoInfo.owner }, { title: repoInfo.repo }]} separator=">" />
+      <Breadcrumb
+        separator=">"
+        items={[
+          {
+            title: (
+              <a
+                href={`https://github.com/${repoInfo.owner}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {repoInfo.owner}
+              </a>
+            ),
+          },
+          {
+            title: (
+              <a
+                href={`https://github.com/${repoInfo.owner}/${repoInfo.repo}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {repoInfo.repo}
+              </a>
+            ),
+          },
+        ]}
+      />
 
       <Typography.Text>
         <StarFilled style={{ color: 'gold', marginRight: 8 }} />
