@@ -21,41 +21,53 @@ interface IssueState {
   issues: Record<ColumnType, Issue[]>
   loading: boolean
   repoInfo: { owner: string; repo: string; stars: number } | null
-  fetchIssues: (repoUrl: string) => Promise<void>
+  fetchIssues: (repoUrl?: string) => Promise<void>
   moveIssue: (fromColumn: ColumnType, issueId: number, toColumn: ColumnType) => void
   reorderIssue: (column: ColumnType, fromIndex: number, toIndex: number) => void
 }
 
-const STORAGE_ISSUES_KEY = 'repo_info'
-const STORAGE_REPO_INFO_KEY = 'issues_state'
-const STORAGE_REPO_URL_KEY = 'repo-url'
 const GITHUB_API_URL = 'https://api.github.com/repos'
+const LAST_REPO_KEY = 'last_repo_url'
 
-const loadState = () => {
-  const savedIssues = sessionStorage.getItem(STORAGE_ISSUES_KEY)
-  const storedRepoInfo = sessionStorage.getItem('repoInfo')
-
-  return {
-    repoInfo: storedRepoInfo ? JSON.parse(storedRepoInfo) : null,
-    issues: savedIssues ? JSON.parse(savedIssues) : { ToDo: [], InProgress: [], Done: [] },
-  }
-}
+const getStorageKey = (owner: string, repo: string) => `issues-${owner}/${repo}`
+const getRepoInfoKey = (owner: string, repo: string) => `repoInfo-${owner}/${repo}`
 
 export const useIssueStore = create<IssueState>((set) => ({
-  ...loadState(),
+  issues: { ToDo: [], InProgress: [], Done: [] },
+  repoInfo: null,
   loading: false,
 
   fetchIssues: async (repoUrl) => {
     try {
       set({ loading: true })
 
+      if (!repoUrl) {
+        const lastRepoUrl = sessionStorage.getItem(LAST_REPO_KEY)
+        if (!lastRepoUrl) {
+          set({ loading: false })
+          return
+        }
+        repoUrl = lastRepoUrl
+      }
+
       const url = new URL(repoUrl)
       const [, owner, repo] = url.pathname.split('/')
       if (!owner || !repo) throw new Error('Invalid GitHub repository URL')
 
+      const issuesKey = getStorageKey(owner, repo)
+      const repoInfoKey = getRepoInfoKey(owner, repo)
+
+      const savedIssues = sessionStorage.getItem(issuesKey)
+      const savedRepoInfo = sessionStorage.getItem(repoInfoKey)
+
+      if (savedIssues && savedRepoInfo) {
+        set({ issues: JSON.parse(savedIssues), repoInfo: JSON.parse(savedRepoInfo) })
+        sessionStorage.setItem(LAST_REPO_KEY, repoUrl)
+        return
+      }
+
       const issuesResponse = await fetch(`${GITHUB_API_URL}/${owner}/${repo}/issues?per_page=100`)
       const repoResponse = await fetch(`${GITHUB_API_URL}/${owner}/${repo}`)
-
       const issuesData = await issuesResponse.json()
       const repoData = await repoResponse.json()
 
@@ -82,9 +94,10 @@ export const useIssueStore = create<IssueState>((set) => ({
       const newRepoInfo = { owner, repo, stars: repoData.stargazers_count }
 
       set({ issues: newState, repoInfo: newRepoInfo })
-      sessionStorage.setItem(STORAGE_REPO_URL_KEY, repoUrl)
-      sessionStorage.setItem(STORAGE_REPO_INFO_KEY, JSON.stringify(newRepoInfo))
-      sessionStorage.setItem(STORAGE_ISSUES_KEY, JSON.stringify(newState))
+
+      sessionStorage.setItem(issuesKey, JSON.stringify(newState))
+      sessionStorage.setItem(repoInfoKey, JSON.stringify(newRepoInfo))
+      sessionStorage.setItem(LAST_REPO_KEY, repoUrl)
     } catch (error) {
       console.error('Error fetching issues:', error)
       throw error
@@ -104,7 +117,13 @@ export const useIssueStore = create<IssueState>((set) => ({
         [toColumn]: [...state.issues[toColumn], issueToMove],
       }
 
-      sessionStorage.setItem(STORAGE_ISSUES_KEY, JSON.stringify(newState))
+      if (state.repoInfo) {
+        sessionStorage.setItem(
+          getStorageKey(state.repoInfo.owner, state.repoInfo.repo),
+          JSON.stringify(newState)
+        )
+      }
+
       return { issues: newState }
     }),
 
@@ -115,8 +134,16 @@ export const useIssueStore = create<IssueState>((set) => ({
       updatedColumn.splice(toIndex, 0, movedIssue)
 
       const newState = { ...state.issues, [column]: updatedColumn }
-      sessionStorage.setItem(STORAGE_ISSUES_KEY, JSON.stringify(newState))
+
+      if (state.repoInfo) {
+        sessionStorage.setItem(
+          getStorageKey(state.repoInfo.owner, state.repoInfo.repo),
+          JSON.stringify(newState)
+        )
+      }
 
       return { issues: newState }
     }),
 }))
+
+useIssueStore.getState().fetchIssues()
