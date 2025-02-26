@@ -14,7 +14,6 @@ interface ColumnProps {
 const IssueColumn: React.FC<ColumnProps> = ({ title, issues }) => {
   const issueIds = useMemo(() => issues.map((issue) => issue.id), [issues])
 
-  // Создаём droppable-зону для пустых колонок
   const { setNodeRef } = useDroppable({
     id: title,
     data: { column: title },
